@@ -1,0 +1,56 @@
+let bet = 3
+
+match tx {
+  case ttx: DataTransaction =>
+  let balance = wavesBalance(ttx.sender)
+  let stateStart = balance == 0 && extract(getInteger(ttx.sender, "x1")) == 0 && extract(getInteger(ttx.sender, "y1")) == 0 && extract(getInteger(ttx.sender, "x2")) == 0 && extract(getInteger(ttx.sender, "y2")) == 0
+  let stateBeginning1 = balance >= bet && balance < 2*bet 
+  let stateBeginning2 = balance >= 2*bet
+  let statePlay1 = stateBeginning2 && extract(getInteger(ttx.sender, "x1")) > 0 && extract(getInteger(ttx.sender, "y1")) > 0 && extract(getInteger(ttx.sender, "x2")) == 0 && extract(getInteger(ttx.sender, "y2")) == 0
+  let statePlay2 = stateBeginning2 && extract(getInteger(ttx.sender, "x1")) > 0 && extract(getInteger(ttx.sender, "y1")) > 0 && extract(getInteger(ttx.sender, "x2")) > 0 && extract(getInteger(ttx.sender, "y2")) > 0
+
+  if (stateStart)
+  then
+  true
+  else  if (stateBeginning1)
+        then      
+        true
+        else  if (stateBeginning2)
+              then
+              let step1 = size(ttx.data) == 2 && extract(getInteger(ttx.data, "x1")) > 0 && extract(getInteger(ttx.data, "y1")) > 0 && extract(getInteger(ttx.data, "x1")) < 500 && extract(getInteger(ttx.data, "y1")) < 500
+              true
+              else  if (statePlay1)
+                    then
+                    let step2 = size(ttx.data) == 2 && extract(getInteger(ttx.data, "x2")) > 0 && extract(getInteger(ttx.data, "y2")) > 0 && extract(getInteger(ttx.data, "x2")) < 500 && extract(getInteger(ttx.data, "y2")) < 500
+                    true
+                    else  if (statePlay2)
+                          then
+                          true
+                          else false
+    
+  case ttx: TransferTransaction => 
+    let balance = wavesBalance(ttx.sender)
+  let stateStart = balance == 0 && extract(getInteger(ttx.sender, "x1")) == 0 && extract(getInteger(ttx.sender, "y1")) == 0 && extract(getInteger(ttx.sender, "x2")) == 0 && extract(getInteger(ttx.sender, "y2")) == 0
+  let stateBeginning1 = balance >= bet && balance < 2*bet 
+  let stateBeginning2 = balance >= 2*bet
+  let statePlay1 = stateBeginning2 && extract(getInteger(ttx.sender, "x1")) > 0 && extract(getInteger(ttx.sender, "y1")) > 0 && extract(getInteger(ttx.sender, "x2")) == 0 && extract(getInteger(ttx.sender, "y2")) == 0
+  let statePlay2 = stateBeginning2 && extract(getInteger(ttx.sender, "x1")) > 0 && extract(getInteger(ttx.sender, "y1")) > 0 && extract(getInteger(ttx.sender, "x2")) > 0 && extract(getInteger(ttx.sender, "y2")) > 0
+
+  if (stateBeginning1)
+  then
+      if (height >= extract(getInteger(ttx.sender, "start")) + 50)
+      then
+      addressFromRecipient(ttx.recipient) == addressFromString(extract(getString(ttx.sender, "address1"))) 
+      else
+      true
+    else  if (stateBeginning2 && !statePlay1 && !statePlay2 && height >= extract(getInteger(ttx.sender, "start")) + 100)
+          then
+          addressFromRecipient(ttx.recipient) == addressFromString(extract(getString(ttx.sender, "address2"))) 
+          else if (stateBeginning2 && statePlay2) then
+                let win1 = true
+                let win2 = true
+                win1 || win2
+                else
+                true
+  case other => false
+}

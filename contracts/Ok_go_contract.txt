@@ -1,0 +1,92 @@
+      #Set player address and PubKey on backend
+      let playerAddr = Address(base58'3MyP3hrK8SBvtXtggNWdsry8KuGdrv1sFrV')
+      let playerPubKey = base58'BYrrqVpD5uuz7cndnPwuUxuYFUK6Bovu6yfoV8seY6Px'
+
+      #Set casino address and PubKey on backend
+      let casinoAddr = Address(base58'3MzzYQCC8Ks86exHaWV2VpaANbNLPRDunNJ')
+      let casinoPubKey = base58'HnSkSntD7ihFgZpLNmHgdVnVmCYxJLC96eNbubTXsWju'
+
+      let playerSigned = (sigVerify(tx.bodyBytes,tx.proofs[0],playerPubKey))
+      let casinoSigned = (sigVerify(tx.bodyBytes,tx.proofs[0],casinoPubKey))
+
+      let me = tx.sender
+      let p1shipX = extract(getInteger(me, "p1shipX"))
+      let p1shipY = extract(getInteger(me, "p1shipY"))
+      let p1finishX = extract(getInteger(me, "p1finishX"))
+      let p1finishY = extract(getInteger(me, "p1finishY"))
+      let p1timeStart = extract(getInteger(me, "p1timeStart"))
+      let p1timeEnd = extract(getInteger(me, "p1timeEnd"))
+
+      let p2shipX = extract(getInteger(me, "p1shipX"))
+      let p2shipY = extract(getInteger(me, "p1shipY"))
+      let p2finishX = extract(getInteger(me, "p1finishX"))
+      let p2finishY = extract(getInteger(me, "p1finishY"))
+      let p2timeStart = extract(getInteger(me, "p1timeStart"))
+      let p2timeEnd = extract(getInteger(me, "p1timeEnd"))
+
+
+
+match tx {
+  case dtx:DataTransaction =>
+      # is main choice1, 1 is salt, 2-6 is additional choice1
+      let num = size(dtx.data)
+      let p1shipXnew = extract(getInteger(dtx.data, "p1shipX"))
+      let p1shipYnew = extract(getInteger(dtx.data, "p1shipY"))
+      let p1finishXnew = extract(getInteger(dtx.data, "p1finishX"))
+      let p1finishYnew = extract(getInteger(dtx.data, "p1finishY"))
+      let p1timeStartnew = extract(getInteger(dtx.data, "p1timeStart"))
+      let p1timeEndnew = extract(getInteger(dtx.data, "p1timeEnd"))
+
+      let p2shipXnew = extract(getInteger(dtx.data, "p1shipX"))
+      let p2shipYnew = extract(getInteger(dtx.data, "p1shipY"))
+      let p2finishXnew = extract(getInteger(dtx.data, "p1finishX"))
+      let p2finishYnew = extract(getInteger(dtx.data, "p1finishY"))
+      let p2timeStartnew = extract(getInteger(dtx.data, "p1timeStart"))
+      let p2timeEndnew = extract(getInteger(dtx.data, "p1timeEnd"))
+      
+      let explode = extract(getInteger(dtx.data, "explode"))
+      
+
+    #Player1 way updated, player 2 way is the same
+    let player1turn = (p1timeStartnew != p1timeStart) && (p2timeStartnew == p2timeStart)
+    #Or player 2 turn
+    let player2turn = (p1timeStartnew == p1timeStart) && (p2timeStartnew != p2timeStart)
+
+    let x1 = p1finishX - p1shipX;
+    let y1 = p1finishY - p1shipY;
+    let wayTime1 = p1timeEnd - p1timeStart;
+
+    #That may be vulnerable code. It can be replaced with height, but it will decrease game speed or we can use time loaded with oracle
+    let timePass1 = tx.timestamp - p1timeStart;
+    let distancePassed1 = timePass1/wayTime1;
+ 
+    let currentX1 = p1shipX + x1*distancePassed1;
+    let currentY1 = p1shipY + y1*distancePassed1;
+      
+
+    let x2 = p2finishX - p2shipX;
+    let y2 = p2finishY - p2shipY;
+    let wayTime2 = p2timeEnd - p2timeStart;
+
+    #That may be vulnerable code. It can be replaced with height, but it will decrease game speed or we can use time loaded with oracle
+    let timePass2 = tx.timestamp - p2timeStart;
+    let distancePassed2 = timePass2/wayTime2;
+ 
+    let currentX2 = p2shipX + x1*distancePassed2;
+    let currentY2 = p2shipY + y1*distancePassed2;
+
+    #Checking, that new way start position match current position
+    let turn1correct = player1turn && (   ((currentX1 - p1shipX) < 15) || ((currentX1 - p1shipX) > -15 )) && (   ((currentY1 - p1shipY) < 15) || ((currentY1 - p1shipY) > -15 ))
+    let turn2correct = player2turn && (   ((currentX2 - p2shipX) < 15) || ((currentX2 - p2shipX) > -15 )) && (   ((currentY2 - p2shipY) < 15) || ((currentY2 - p2shipY) > -15 ))
+    #Checking that ships near enough for explosion
+    let explodeCorrect = (explode == 1) && (   ((currentX1 - currentX2) < 15) || ((currentX1 - currentX2) > -15 )) && (   ((currentY1 - currentY2) < 15) || ((currentY1 - currentY2) > -15 ))
+
+
+    turn1correct || turn2correct || explodeCorrect
+    
+
+ 
+  case ttx:TransferTransaction =>
+      false
+  case _=> true # !!! for prod -> case_ => false 
+}
